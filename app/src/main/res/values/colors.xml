@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    // Light theme
+
     <!-- Primary Palette -->
     <color name="primary">#9B2A2A</color> <!-- Use for primary buttons like "Add" and key action highlights -->
     <color name="on_primary">#FFFFFF</color> <!-- Use for text or icons on primary buttons -->
@@ -26,4 +29,41 @@
 
     <!-- Shadows (if needed for elevation) -->
     <color name="shadow">#40000000</color> <!-- Use for shadows to give depth to elevated components -->
+
+
+
+
+    <!-- Light Theme Colors -->
+    <color name="background_light">#FAFAFA</color> <!-- Background -->
+    <color name="primary_light">#4CAF50</color> <!-- Primary AppBar and Buttons -->
+    <color name="on_primary_light">#FFFFFF</color> <!-- Text/Icons on Primary -->
+    <color name="secondary_light">#8BC34A</color> <!-- Secondary Elements -->
+    <color name="on_secondary_light">#FFFFFF</color> <!-- Text/Icons on Secondary -->
+    <color name="surface_light">#FFFFFF</color> <!-- Card Background -->
+    <color name="on_surface_light">#212121</color> <!-- Task TextField Label and Divider -->
+    <color name="border_accent_light">#BDBDBD</color> <!-- Button Borders and Input Borders -->
+    <color name="shadow_light">#E0E0E0</color> <!-- Shadow Effects -->
+    <color name="done_button_bg_light">#66BB6A</color> <!-- Done Button Background -->
+    <color name="edit_button_bg_light">#FFA726</color> <!-- Edit Button Background -->
+    <color name="delete_button_bg_light">#EF5350</color> <!-- Delete Button Background -->
+    <color name="item_text_light">#212121</color> <!-- Card Text -->
+    <color name="on_button_light">#FFFFFF</color> <!-- Text on Buttons -->
+
+    <!-- Dark Theme Colors -->
+    <color name="background_dark">#121212</color> <!-- Background -->
+    <color name="primary_dark">#81C784</color> <!-- Primary AppBar and Buttons -->
+    <color name="on_primary_dark">#000000</color> <!-- Text/Icons on Primary -->
+    <color name="secondary_dark">#AED581</color> <!-- Secondary Elements -->
+    <color name="on_secondary_dark">#000000</color> <!-- Text/Icons on Secondary -->
+    <color name="surface_dark">#1E1E1E</color> <!-- Card Background -->
+    <color name="on_surface_dark">#E0E0E0</color> <!-- Task TextField Label and Divider -->
+    <color name="border_accent_dark">#424242</color> <!-- Button Borders and Input Borders -->
+    <color name="shadow_dark">#333333</color> <!-- Shadow Effects -->
+    <color name="done_button_bg_dark">#388E3C</color> <!-- Done Button Background -->
+    <color name="edit_button_bg_dark">#F57C00</color> <!-- Edit Button Background -->
+    <color name="delete_button_bg_dark">#D32F2F</color> <!-- Delete Button Background -->
+    <color name="item_text_dark">#E0E0E0</color> <!-- Card Text -->
+    <color name="on_button_dark">#000000</color> <!-- Text on Buttons -->
+
+
 </resources>

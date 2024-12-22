@@ -29,6 +29,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +49,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -58,6 +61,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -96,7 +100,8 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
 //    val topBarBehaviour = TopAppBarDefaults.pinnedScrollBehavior()
 
     val myContext = LocalContext.current
-    val taskList = taskReadData(myContext)
+    val taskList = remember { mutableStateListOf<String>().apply { addAll(taskReadData(myContext)) } }
+    val doneList = remember { mutableStateListOf<String>().apply { addAll(doneReadData(myContext)) } }
 
     val deleteDialogStatus = remember {
         mutableStateOf(false)
@@ -104,7 +109,6 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
     val clickedItemIndex = remember {
         mutableIntStateOf(0)
     }
-
     val updateDialogStatus = remember {
         mutableStateOf(false)
     }
@@ -116,6 +120,26 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
     val taskDialogStatus = remember {
         mutableStateOf(false)
     }
+    val doneCheckStatus = remember {
+        mutableStateMapOf<String, Boolean>().apply {
+            taskList.forEach { put(it, false) }
+        }
+    }
+    val doneClickedItemIndex = remember {
+        mutableIntStateOf(0)
+    }
+
+    val doneClickedItem = remember {
+        mutableStateOf("")
+    }
+
+    val deleteDoneDialogStatus = remember {
+        mutableStateOf(false)
+    }
+    val taskDoneDialogStatus = remember {
+        mutableStateOf(false)
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -145,6 +169,7 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                                 uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
                                 uncheckedTrackColor = MaterialTheme.colorScheme.secondaryContainer
                             ),
+                            modifier = Modifier.offset((-5).dp),
                             thumbContent = {
                                 if (toggleTheme.value) {
                                     Icon(
@@ -208,6 +233,7 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                         onClick = {
                             if (todoName.value.isNotEmpty()) {
                                 taskList.add(todoName.value)
+                                doneCheckStatus[todoName.value] = false
                                 taskWriteData(taskList, myContext)
                                 todoName.value = ""
                                 focusManager.clearFocus()
@@ -238,7 +264,7 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(
                     text = "Tasks",
-                    fontSize = 25.sp,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.offset(15.dp)
@@ -280,20 +306,23 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                                             taskDialogStatus.value = true
                                         },
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-//                                    Checkbox(checked = checkTaskState.value, onCheckedChange = {
-//                                        checkTaskState.value = it
-//                                        Toast.makeText(
-//                                            myContext,
-//                                            "Task Completed",
-//                                            Toast.LENGTH_SHORT
-//                                        ).show()
-//                                        doneList.add(item)`
-//                                        doneWriteData(doneList, myContext)
-//                                        taskList.removeAt(index)
-//                                        taskWriteData(taskList, myContext)
-//                                    })
+                                    Checkbox(
+                                        checked = doneCheckStatus[item] ?: false,
+                                        onCheckedChange = { isChecked ->
+                                            doneCheckStatus[item] = isChecked
+
+                                            if (isChecked) {
+                                                Toast.makeText(myContext, "Task Completed", Toast.LENGTH_SHORT).show()
+                                                doneList.add(item)
+                                                doneWriteData(doneList, myContext)
+                                                taskList.remove(item)
+                                                taskWriteData(taskList, myContext)
+                                                doneCheckStatus.remove(item) // Remove from the map
+                                            }
+                                        }
+                                    )
                                     Spacer(modifier = Modifier.size(10.dp))
                                     Text(
                                         text = item,
@@ -351,6 +380,117 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
 
                     )
                 }
+                Spacer(modifier = Modifier.size(10.dp))
+                Text(
+                    text = "Completed",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.offset(15.dp)
+                )
+                Spacer(modifier = Modifier.size(5.dp))
+                HorizontalDivider(
+                    thickness = 2.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(7.dp, 0.dp, 7.dp, 0.dp)
+                        .shadow(10.dp)
+                )
+                Spacer(modifier = Modifier.size(10.dp))
+                LazyColumn {
+                    items(
+                        count = doneList.size,
+                        itemContent = { index ->
+                            val item = doneList[index]
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 5.dp, start = 7.dp, end = 7.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 6.dp
+                                ),
+                                shape = RoundedCornerShape(10)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp)
+                                        .clickable {
+                                            doneClickedItem.value = item
+                                            taskDoneDialogStatus.value = true
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                ) {
+                                    Checkbox(
+                                        checked = true,
+                                        onCheckedChange = { isChecked ->
+                                            if (!isChecked) {
+                                                Toast.makeText(myContext, "Task Marked as Incomplete", Toast.LENGTH_SHORT).show()
+                                                taskList.add(item) // Add back to the task list
+                                                taskWriteData(taskList, myContext)
+                                                doneList.removeAt(index) // Remove from the completed list
+                                                doneWriteData(doneList, myContext)
+                                            }
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.size(10.dp))
+                                    Text(
+                                        text = item,
+                                        fontSize = 13.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Start,
+                                        fontWeight = FontWeight.Bold,
+                                        textDecoration = TextDecoration.LineThrough,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(8F)
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            deleteDoneDialogStatus.value = true
+                                            doneClickedItemIndex.intValue = index
+                                        }, modifier = Modifier
+                                            .background(
+                                                color = MaterialTheme.colorScheme.errorContainer,
+                                                shape = RoundedCornerShape(5.dp)
+                                            )
+                                            .size(33.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                if (taskDoneDialogStatus.value) {
+                    AlertDialog(
+                        onDismissRequest = { taskDoneDialogStatus.value = false },
+                        text = { Text(text = doneClickedItem.value) },
+                        shape = RoundedCornerShape(10),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        textContentColor = MaterialTheme.colorScheme.onSurface,
+                        iconContentColor = MaterialTheme.colorScheme.primary,
+                        confirmButton = {
+                            TextButton(onClick = {
+                                taskDoneDialogStatus.value = false
+                            }) {
+                                Text(text = "OK")
+                            }
+                        })
+                }
+
                 if (taskDialogStatus.value) {
                     AlertDialog(
                         onDismissRequest = { taskDialogStatus.value = false },
@@ -366,6 +506,36 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                                 Text(text = "OK")
                             }
                         })
+                }
+
+                if (deleteDoneDialogStatus.value) {
+
+                    AlertDialog(
+                        onDismissRequest = { deleteDoneDialogStatus.value = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                doneList.removeAt(doneClickedItemIndex.intValue)
+                                doneWriteData(doneList, myContext)
+                                deleteDoneDialogStatus.value = false
+                                Toast.makeText(myContext, "Deleted successfully", Toast.LENGTH_SHORT)
+                                    .show()
+                            }) {
+                                Text(text = "YES")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { deleteDoneDialogStatus.value = false }) {
+                                Text(text = "NO")
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        textContentColor = MaterialTheme.colorScheme.onSurface,
+                        iconContentColor = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(10),
+                        title = { Text(text = "Delete") },
+                        text = { Text(text = "Are you sure you want to delete this task?") }
+                    )
+
                 }
 
                 if (deleteDialogStatus.value) {

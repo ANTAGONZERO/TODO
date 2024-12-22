@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,7 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
@@ -56,6 +56,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -88,7 +90,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainPage(toggleTheme: MutableState<Boolean>) {
 
@@ -97,11 +99,12 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
     }
 
     val focusManager = LocalFocusManager.current
-//    val topBarBehaviour = TopAppBarDefaults.pinnedScrollBehavior()
 
     val myContext = LocalContext.current
-    val taskList = remember { mutableStateListOf<String>().apply { addAll(taskReadData(myContext)) } }
-    val doneList = remember { mutableStateListOf<String>().apply { addAll(doneReadData(myContext)) } }
+    val taskList =
+        remember { mutableStateListOf<String>().apply { addAll(taskReadData(myContext)) } }
+    val doneList =
+        remember { mutableStateListOf<String>().apply { addAll(doneReadData(myContext)) } }
 
     val deleteDialogStatus = remember {
         mutableStateOf(false)
@@ -140,17 +143,21 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
         mutableStateOf(false)
     }
 
+    // Create a parent nested scroll connection
+    val parentNestedScrollConnection = remember {
+        object : NestedScrollConnection {}
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 modifier = Modifier.shadow(
-                    15.dp,
+                    25.dp,
                     RoundedCornerShape(0.dp, 0.dp, 10.dp, 10.dp),
                     true,
                     MaterialTheme.colorScheme.primary
                 ),
                 title = { Text(text = "Todo") },
-//                scrollBehavior = topBarBehaviour,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -190,7 +197,13 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                 }
             )
         }, content = { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .nestedScroll(parentNestedScrollConnection),
+                verticalArrangement = Arrangement.Center
+            ) {
 
                 Spacer(modifier = Modifier.size(10.dp))
                 Row(
@@ -279,106 +292,125 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                         .shadow(10.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
-                LazyColumn {
-                    items(
-                        count = taskList.size,
-                        itemContent = { index ->
-                            val item = taskList[index]
-                            ElevatedCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 5.dp, start = 7.dp, end = 7.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                shape = RoundedCornerShape(10)
-                            ) {
-                                Row(
+                if(taskList.isEmpty())
+                {
+                    Text(
+                        text = "No task added.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.offset(15.dp)
+                    )
+                }else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.5f)
+                            .nestedScroll(parentNestedScrollConnection)
+                    ) {
+                        items(
+                            count = taskList.size,
+                            itemContent = { index ->
+                                val item = taskList[index]
+                                ElevatedCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(10.dp)
-                                        .clickable {
-                                            clickedItem.value = item
-                                            taskDialogStatus.value = true
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .padding(bottom = 5.dp, start = 7.dp, end = 7.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = 6.dp
+                                    ),
+                                    shape = RoundedCornerShape(10)
                                 ) {
-                                    Checkbox(
-                                        checked = doneCheckStatus[item] ?: false,
-                                        onCheckedChange = { isChecked ->
-                                            doneCheckStatus[item] = isChecked
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp)
+                                            .clickable {
+                                                clickedItem.value = item
+                                                taskDialogStatus.value = true
+                                            },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Checkbox(
+                                            checked = doneCheckStatus[item] ?: false,
+                                            onCheckedChange = { isChecked ->
+                                                doneCheckStatus[item] = isChecked
 
-                                            if (isChecked) {
-                                                Toast.makeText(myContext, "Task Completed", Toast.LENGTH_SHORT).show()
-                                                doneList.add(item)
-                                                doneWriteData(doneList, myContext)
-                                                taskList.remove(item)
-                                                taskWriteData(taskList, myContext)
-                                                doneCheckStatus.remove(item) // Remove from the map
+                                                if (isChecked) {
+                                                    Toast.makeText(
+                                                        myContext,
+                                                        "Task Completed",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    doneList.add(item)
+                                                    doneWriteData(doneList, myContext)
+                                                    taskList.remove(item)
+                                                    taskWriteData(taskList, myContext)
+                                                    doneCheckStatus.remove(item) // Remove from the map
+                                                }
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.size(10.dp))
+                                        Text(
+                                            text = item,
+                                            fontSize = 13.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Start,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(8F)
+                                        )
+                                        Spacer(modifier = Modifier.size(7.dp))
+                                        Row(modifier = Modifier.weight(3f)) {
+                                            IconButton(
+                                                onClick = {
+                                                    updateDialogStatus.value = true
+                                                    clickedItemIndex.intValue = index
+                                                    clickedItem.value = item
+                                                }, modifier = Modifier
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                                                        shape = RoundedCornerShape(5.dp)
+                                                    )
+                                                    .size(33.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Filled.Edit,
+                                                    contentDescription = "Edit",
+                                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.size(7.dp))
+                                            IconButton(
+                                                onClick = {
+                                                    deleteDialogStatus.value = true
+                                                    clickedItemIndex.intValue = index
+                                                }, modifier = Modifier
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.errorContainer,
+                                                        shape = RoundedCornerShape(5.dp)
+                                                    )
+                                                    .size(33.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Filled.Delete,
+                                                    contentDescription = "Delete",
+                                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                                )
                                             }
                                         }
-                                    )
-                                    Spacer(modifier = Modifier.size(10.dp))
-                                    Text(
-                                        text = item,
-                                        fontSize = 13.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Start,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(8F)
-                                    )
-                                    Spacer(modifier = Modifier.size(7.dp))
-                                    Row(modifier = Modifier.weight(3f)) {
-                                        IconButton(
-                                            onClick = {
-                                                updateDialogStatus.value = true
-                                                clickedItemIndex.intValue = index
-                                                clickedItem.value = item
-                                            }, modifier = Modifier
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                                                    shape = RoundedCornerShape(5.dp)
-                                                )
-                                                .size(33.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Edit,
-                                                contentDescription = "Edit",
-                                                tint = MaterialTheme.colorScheme.onTertiaryContainer
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.size(7.dp))
-                                        IconButton(
-                                            onClick = {
-                                                deleteDialogStatus.value = true
-                                                clickedItemIndex.intValue = index
-                                            }, modifier = Modifier
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.errorContainer,
-                                                    shape = RoundedCornerShape(5.dp)
-                                                )
-                                                .size(33.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Delete,
-                                                contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        }
-                                    }
 
+                                    }
                                 }
                             }
-                        }
 
-                    )
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(
@@ -398,207 +430,279 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                         .shadow(10.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
-                LazyColumn {
-                    items(
-                        count = doneList.size,
-                        itemContent = { index ->
-                            val item = doneList[index]
-                            ElevatedCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 5.dp, start = 7.dp, end = 7.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                shape = RoundedCornerShape(10)
-                            ) {
-                                Row(
+                if(doneList.isEmpty()){
+                    Text(
+                        text = "No task completed.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.offset(15.dp)
+                    )
+                }else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.2f)
+                            .nestedScroll(parentNestedScrollConnection)
+                    ) {
+                        items(
+                            count = doneList.size,
+                            itemContent = { index ->
+                                val item = doneList[index]
+                                ElevatedCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(10.dp)
-                                        .clickable {
-                                            doneClickedItem.value = item
-                                            taskDoneDialogStatus.value = true
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                        .padding(bottom = 5.dp, start = 7.dp, end = 7.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = 6.dp
+                                    ),
+                                    shape = RoundedCornerShape(10)
                                 ) {
-                                    Checkbox(
-                                        checked = true,
-                                        onCheckedChange = { isChecked ->
-                                            if (!isChecked) {
-                                                Toast.makeText(myContext, "Task Marked as Incomplete", Toast.LENGTH_SHORT).show()
-                                                taskList.add(item) // Add back to the task list
-                                                taskWriteData(taskList, myContext)
-                                                doneList.removeAt(index) // Remove from the completed list
-                                                doneWriteData(doneList, myContext)
-                                            }
-                                        }
-                                    )
-                                    Spacer(modifier = Modifier.size(10.dp))
-                                    Text(
-                                        text = item,
-                                        fontSize = 13.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Start,
-                                        fontWeight = FontWeight.Bold,
-                                        textDecoration = TextDecoration.LineThrough,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(8F)
-                                    )
-                                    IconButton(
-                                        onClick = {
-                                            deleteDoneDialogStatus.value = true
-                                            doneClickedItemIndex.intValue = index
-                                        }, modifier = Modifier
-                                            .background(
-                                                color = MaterialTheme.colorScheme.errorContainer,
-                                                shape = RoundedCornerShape(5.dp)
-                                            )
-                                            .size(33.dp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp)
+                                            .clickable {
+                                                doneClickedItem.value = item
+                                                taskDoneDialogStatus.value = true
+                                            },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Absolute.SpaceBetween
                                     ) {
-                                        Icon(
-                                            Icons.Filled.Delete,
-                                            contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        Checkbox(
+                                            checked = true,
+                                            onCheckedChange = { isChecked ->
+                                                if (!isChecked) {
+                                                    Toast.makeText(
+                                                        myContext,
+                                                        "Task Marked as Incomplete",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    taskList.add(item) // Add back to the task list
+                                                    taskWriteData(taskList, myContext)
+                                                    doneList.removeAt(index) // Remove from the completed list
+                                                    doneWriteData(doneList, myContext)
+                                                }
+                                            }
                                         )
+                                        Spacer(modifier = Modifier.size(10.dp))
+                                        Text(
+                                            text = item,
+                                            fontSize = 13.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Start,
+                                            fontWeight = FontWeight.Bold,
+                                            textDecoration = TextDecoration.LineThrough,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(8F)
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                deleteDoneDialogStatus.value = true
+                                                doneClickedItemIndex.intValue = index
+                                            }, modifier = Modifier
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.errorContainer,
+                                                    shape = RoundedCornerShape(5.dp)
+                                                )
+                                                .size(33.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Delete,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
+            }
 
-                if (taskDoneDialogStatus.value) {
-                    AlertDialog(
-                        onDismissRequest = { taskDoneDialogStatus.value = false },
-                        text = { Text(text = doneClickedItem.value) },
-                        shape = RoundedCornerShape(10),
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        textContentColor = MaterialTheme.colorScheme.onSurface,
-                        iconContentColor = MaterialTheme.colorScheme.primary,
-                        confirmButton = {
-                            TextButton(onClick = {
+            if (taskDoneDialogStatus.value) {
+                AlertDialog(
+                    onDismissRequest = { taskDoneDialogStatus.value = false },
+                    text = { Text(text = doneClickedItem.value) },
+                    shape = RoundedCornerShape(10),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    textContentColor = MaterialTheme.colorScheme.onSurface,
+                    iconContentColor = MaterialTheme.colorScheme.primary,
+                    confirmButton = {
+                        ElevatedButton(
+                            onClick = {
                                 taskDoneDialogStatus.value = false
-                            }) {
-                                Text(text = "OK")
-                            }
-                        })
-                }
+                            }, colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(text = "OK")
+                        }
+                    })
+            }
 
-                if (taskDialogStatus.value) {
-                    AlertDialog(
-                        onDismissRequest = { taskDialogStatus.value = false },
-                        text = { Text(text = clickedItem.value) },
-                        shape = RoundedCornerShape(10),
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        textContentColor = MaterialTheme.colorScheme.onSurface,
-                        iconContentColor = MaterialTheme.colorScheme.primary,
-                        confirmButton = {
-                            TextButton(onClick = {
+            if (taskDialogStatus.value) {
+                AlertDialog(
+                    onDismissRequest = { taskDialogStatus.value = false },
+                    text = { Text(text = clickedItem.value) },
+                    shape = RoundedCornerShape(10),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    textContentColor = MaterialTheme.colorScheme.onSurface,
+                    iconContentColor = MaterialTheme.colorScheme.primary,
+                    confirmButton = {
+                        ElevatedButton(
+                            onClick = {
                                 taskDialogStatus.value = false
-                            }) {
-                                Text(text = "OK")
-                            }
-                        })
-                }
+                            }, colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(text = "OK")
+                        }
+                    })
+            }
 
-                if (deleteDoneDialogStatus.value) {
+            if (deleteDoneDialogStatus.value) {
 
-                    AlertDialog(
-                        onDismissRequest = { deleteDoneDialogStatus.value = false },
-                        confirmButton = {
-                            TextButton(onClick = {
+                AlertDialog(
+                    onDismissRequest = { deleteDoneDialogStatus.value = false },
+                    confirmButton = {
+                        ElevatedButton(
+                            onClick = {
                                 doneList.removeAt(doneClickedItemIndex.intValue)
                                 doneWriteData(doneList, myContext)
                                 deleteDoneDialogStatus.value = false
-                                Toast.makeText(myContext, "Deleted successfully", Toast.LENGTH_SHORT)
+                                Toast.makeText(
+                                    myContext,
+                                    "Deleted successfully",
+                                    Toast.LENGTH_SHORT
+                                )
                                     .show()
-                            }) {
-                                Text(text = "YES")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { deleteDoneDialogStatus.value = false }) {
-                                Text(text = "NO")
-                            }
-                        },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        textContentColor = MaterialTheme.colorScheme.onSurface,
-                        iconContentColor = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(10),
-                        title = { Text(text = "Delete") },
-                        text = { Text(text = "Are you sure you want to delete this task?") }
-                    )
+                            },
+                            shape = ButtonDefaults.outlinedShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(text = "YES")
+                        }
+                    },
+                    dismissButton = {
+                        ElevatedButton(
+                            onClick = { deleteDoneDialogStatus.value = false },
+                            shape = ButtonDefaults.outlinedShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Text(text = "NO")
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    textContentColor = MaterialTheme.colorScheme.onSurface,
+                    iconContentColor = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(10),
+                    title = { Text(text = "Delete") },
+                    text = { Text(text = "Are you sure you want to delete this task?") }
+                )
 
-                }
+            }
 
-                if (deleteDialogStatus.value) {
+            if (deleteDialogStatus.value) {
 
-                    AlertDialog(
-                        onDismissRequest = { deleteDialogStatus.value = false },
-                        confirmButton = {
-                            TextButton(onClick = {
+                AlertDialog(
+                    onDismissRequest = { deleteDialogStatus.value = false },
+                    confirmButton = {
+                        ElevatedButton(
+                            onClick = {
                                 taskList.removeAt(clickedItemIndex.intValue)
                                 taskWriteData(taskList, myContext)
                                 deleteDialogStatus.value = false
                                 Toast.makeText(myContext, "Task Deleted", Toast.LENGTH_SHORT).show()
-                            }) {
-                                Text(text = "YES")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { deleteDialogStatus.value = false }) {
-                                Text(text = "NO")
-                            }
-                        },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        textContentColor = MaterialTheme.colorScheme.onSurface,
-                        iconContentColor = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(10),
-                        title = { Text(text = "Delete Task") },
-                        text = { Text(text = "Are you sure you want to delete this task?") }
-                    )
+                            },
+                            shape = ButtonDefaults.outlinedShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(text = "YES")
+                        }
+                    },
+                    dismissButton = {
+                        ElevatedButton(
+                            onClick = { deleteDialogStatus.value = false },
+                            shape = ButtonDefaults.outlinedShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Text(text = "NO")
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    textContentColor = MaterialTheme.colorScheme.onSurface,
+                    iconContentColor = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(10),
+                    title = { Text(text = "Delete Task") },
+                    text = { Text(text = "Are you sure you want to delete this task?") }
+                )
 
-                }
+            }
 
-                if (updateDialogStatus.value) {
+            if (updateDialogStatus.value) {
 
-                    AlertDialog(
-                        onDismissRequest = { deleteDialogStatus.value = false },
-                        confirmButton = {
-                            TextButton(onClick = {
+                AlertDialog(
+                    onDismissRequest = { deleteDialogStatus.value = false },
+                    confirmButton = {
+                        ElevatedButton(
+                            onClick = {
                                 taskList[clickedItemIndex.intValue] = clickedItem.value
                                 taskWriteData(taskList, myContext)
                                 updateDialogStatus.value = false
                                 Toast.makeText(myContext, "Task Updated", Toast.LENGTH_SHORT).show()
-                            }) {
-                                Text(text = "YES")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { updateDialogStatus.value = false }) {
-                                Text(text = "NO")
-                            }
-                        },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        textContentColor = MaterialTheme.colorScheme.onSurface,
-                        iconContentColor = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(10),
-                        title = { Text(text = "Update Task") },
-                        text = {
-                            TextField(
-                                value = clickedItem.value,
-                                onValueChange = { clickedItem.value = it })
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(text = "YES")
                         }
-                    )
+                    },
+                    dismissButton = {
+                        ElevatedButton(
+                            onClick = { updateDialogStatus.value = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Text(text = "NO")
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    textContentColor = MaterialTheme.colorScheme.onSurface,
+                    iconContentColor = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(10),
+                    title = { Text(text = "Update Task") },
+                    text = {
+                        TextField(
+                            value = clickedItem.value,
+                            onValueChange = { clickedItem.value = it })
+                    }
+                )
 
-                }
             }
         }
     )

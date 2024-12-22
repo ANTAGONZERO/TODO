@@ -1,6 +1,7 @@
 package com.example.to_do
 
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,27 +23,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,17 +64,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.to_do.ui.theme.TODOTheme
 
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TODOTheme {
+            val isDarkTheme = remember { mutableStateOf(false) }
+            TODOTheme(darkTheme = isDarkTheme.value, dynamicColor = false) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = colorResource(id = R.color.background)
+                    color = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground
                 ) {
-                    MainPage()
+                    MainPage(toggleTheme = isDarkTheme)
                 }
             }
         }
@@ -79,8 +86,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainPage() {
-
+fun MainPage(toggleTheme: MutableState<Boolean>) {
 
     val todoName = remember {
         mutableStateOf("")
@@ -90,7 +96,7 @@ fun MainPage() {
 //    val topBarBehaviour = TopAppBarDefaults.pinnedScrollBehavior()
 
     val myContext = LocalContext.current
-    val taskList = readData(myContext)
+    val taskList = taskReadData(myContext)
 
     val deleteDialogStatus = remember {
         mutableStateOf(false)
@@ -110,24 +116,53 @@ fun MainPage() {
     val taskDialogStatus = remember {
         mutableStateOf(false)
     }
-
     Scaffold(
-//        modifier = Modifier.nestedScroll(topBarBehaviour.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
                 modifier = Modifier.shadow(
                     15.dp,
                     RoundedCornerShape(0.dp, 0.dp, 10.dp, 10.dp),
                     true,
-                    colorResource(id = R.color.shadow)
+                    MaterialTheme.colorScheme.primary
                 ),
                 title = { Text(text = "Todo") },
 //                scrollBehavior = topBarBehaviour,
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colorResource(id = R.color.primary),
-                    titleContentColor = colorResource(id = R.color.on_primary),
-                    scrolledContainerColor = colorResource(id = R.color.secondary)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                actions = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+
+                        // SWITCH
+
+                        Switch(
+                            checked = toggleTheme.value,
+                            onCheckedChange = { toggleTheme.value = !toggleTheme.value },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.secondaryContainer
+                            ),
+                            thumbContent = {
+                                if (toggleTheme.value) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_dark_mode_24),
+                                        contentDescription = "Dark Mode",
+                                        modifier = Modifier.padding(3.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_light_mode_24),
+                                        contentDescription = "Dark Mode",
+                                        modifier = Modifier.padding(3.dp)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
             )
         }, content = { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
@@ -136,7 +171,7 @@ fun MainPage() {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(5.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
@@ -149,31 +184,31 @@ fun MainPage() {
                             }
                         },
                         modifier = Modifier
-                            .padding(8.dp)
-                            .weight(7f),
+                            .padding(end = 8.dp)
+                            .weight(1f),
                         label = {
                             Text(
                                 "Enter task",
-                                color = colorResource(id = R.color.on_surface)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = colorResource(id = R.color.on_surface),
-                            unfocusedTextColor = colorResource(id = R.color.on_surface),
-                            cursorColor = colorResource(id = R.color.primary),
-                            focusedIndicatorColor = colorResource(id = R.color.secondary), // Border color when focused
-                            unfocusedIndicatorColor = colorResource(id = R.color.border_accent),
-                            focusedLabelColor = colorResource(id = R.color.secondary),
-                            unfocusedLabelColor = colorResource(id = R.color.on_surface)
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.secondary, // Border color when focused
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface, // Border color when not focused,
+                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
                         ),
-                        singleLine = true,
+                        maxLines = 2,
                         shape = RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp)
                     )
-                    Button(
+                    ElevatedButton(
                         onClick = {
                             if (todoName.value.isNotEmpty()) {
                                 taskList.add(todoName.value)
-                                writeData(taskList, myContext)
+                                taskWriteData(taskList, myContext)
                                 todoName.value = ""
                                 focusManager.clearFocus()
                                 Toast.makeText(myContext, "Task Added", Toast.LENGTH_SHORT).show()
@@ -182,18 +217,18 @@ fun MainPage() {
                                     .show()
                             }
                         },
+                        elevation = ButtonDefaults.buttonElevation(5.dp),
                         modifier = Modifier
-                            .height(65.dp)
-                            .weight(3f),
-                        shape = RoundedCornerShape(5.dp),
+                            .height(60.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = colorResource(id = R.color.primary),
-                            contentColor = colorResource(id = R.color.on_primary)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Text(
                             text = "Add",
-                            color = colorResource(id = R.color.on_button),
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 15.sp
                         )
                         Spacer(modifier = Modifier.size(2.dp))
@@ -205,15 +240,13 @@ fun MainPage() {
                     text = "Tasks",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.Bold,
-                    color = colorResource(
-                        id = R.color.on_surface
-                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.offset(15.dp)
                 )
                 Spacer(modifier = Modifier.size(5.dp))
                 HorizontalDivider(
                     thickness = 2.dp,
-                    color = colorResource(id = R.color.shadow),
+                    color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(7.dp, 0.dp, 7.dp, 0.dp)
@@ -225,13 +258,16 @@ fun MainPage() {
                         count = taskList.size,
                         itemContent = { index ->
                             val item = taskList[index]
-                            Card(
+                            ElevatedCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 5.dp, start = 7.dp, end = 7.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = colorResource(id = R.color.surface),
-                                    contentColor = colorResource(id = R.color.item_text)
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 6.dp
                                 ),
                                 shape = RoundedCornerShape(10)
                             ) {
@@ -246,6 +282,19 @@ fun MainPage() {
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Absolute.SpaceBetween
                                 ) {
+//                                    Checkbox(checked = checkTaskState.value, onCheckedChange = {
+//                                        checkTaskState.value = it
+//                                        Toast.makeText(
+//                                            myContext,
+//                                            "Task Completed",
+//                                            Toast.LENGTH_SHORT
+//                                        ).show()
+//                                        doneList.add(item)`
+//                                        doneWriteData(doneList, myContext)
+//                                        taskList.removeAt(index)
+//                                        taskWriteData(taskList, myContext)
+//                                    })
+                                    Spacer(modifier = Modifier.size(10.dp))
                                     Text(
                                         text = item,
                                         fontSize = 13.sp,
@@ -253,22 +302,11 @@ fun MainPage() {
                                         overflow = TextOverflow.Ellipsis,
                                         textAlign = TextAlign.Start,
                                         fontWeight = FontWeight.Bold,
-                                        color = colorResource(id = R.color.item_text)
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(8F)
                                     )
-
-                                    Row {
-                                        IconButton(
-                                            onClick = { /*TODO*/ }, modifier = Modifier
-                                                .background(
-                                                    color = colorResource(
-                                                        id = R.color.done_button_bg
-                                                    ), shape = RoundedCornerShape(5.dp)
-                                                )
-                                                .size(33.dp)
-                                        ) {
-                                            Icon(Icons.Filled.Done, contentDescription = "Done")
-                                        }
-                                        Spacer(modifier = Modifier.size(7.dp))
+                                    Spacer(modifier = Modifier.size(7.dp))
+                                    Row(modifier = Modifier.weight(3f)) {
                                         IconButton(
                                             onClick = {
                                                 updateDialogStatus.value = true
@@ -276,13 +314,16 @@ fun MainPage() {
                                                 clickedItem.value = item
                                             }, modifier = Modifier
                                                 .background(
-                                                    color = colorResource(
-                                                        id = R.color.edit_button_bg
-                                                    ), shape = RoundedCornerShape(5.dp)
+                                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                                    shape = RoundedCornerShape(5.dp)
                                                 )
                                                 .size(33.dp)
                                         ) {
-                                            Icon(Icons.Filled.Edit, contentDescription = "Done")
+                                            Icon(
+                                                Icons.Filled.Edit,
+                                                contentDescription = "Edit",
+                                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                            )
                                         }
                                         Spacer(modifier = Modifier.size(7.dp))
                                         IconButton(
@@ -291,13 +332,16 @@ fun MainPage() {
                                                 clickedItemIndex.intValue = index
                                             }, modifier = Modifier
                                                 .background(
-                                                    color = colorResource(
-                                                        id = R.color.delete_button_bg
-                                                    ), shape = RoundedCornerShape(5.dp)
+                                                    color = MaterialTheme.colorScheme.errorContainer,
+                                                    shape = RoundedCornerShape(5.dp)
                                                 )
                                                 .size(33.dp)
                                         ) {
-                                            Icon(Icons.Filled.Delete, contentDescription = "Done")
+                                            Icon(
+                                                Icons.Filled.Delete,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
                                         }
                                     }
 
@@ -307,12 +351,14 @@ fun MainPage() {
 
                     )
                 }
-
                 if (taskDialogStatus.value) {
                     AlertDialog(
                         onDismissRequest = { taskDialogStatus.value = false },
                         text = { Text(text = clickedItem.value) },
                         shape = RoundedCornerShape(10),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        textContentColor = MaterialTheme.colorScheme.onSurface,
+                        iconContentColor = MaterialTheme.colorScheme.primary,
                         confirmButton = {
                             TextButton(onClick = {
                                 taskDialogStatus.value = false
@@ -329,7 +375,7 @@ fun MainPage() {
                         confirmButton = {
                             TextButton(onClick = {
                                 taskList.removeAt(clickedItemIndex.intValue)
-                                writeData(taskList, myContext)
+                                taskWriteData(taskList, myContext)
                                 deleteDialogStatus.value = false
                                 Toast.makeText(myContext, "Task Deleted", Toast.LENGTH_SHORT).show()
                             }) {
@@ -341,6 +387,9 @@ fun MainPage() {
                                 Text(text = "NO")
                             }
                         },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        textContentColor = MaterialTheme.colorScheme.onSurface,
+                        iconContentColor = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(10),
                         title = { Text(text = "Delete Task") },
                         text = { Text(text = "Are you sure you want to delete this task?") }
@@ -355,7 +404,7 @@ fun MainPage() {
                         confirmButton = {
                             TextButton(onClick = {
                                 taskList[clickedItemIndex.intValue] = clickedItem.value
-                                writeData(taskList, myContext)
+                                taskWriteData(taskList, myContext)
                                 updateDialogStatus.value = false
                                 Toast.makeText(myContext, "Task Updated", Toast.LENGTH_SHORT).show()
                             }) {
@@ -367,6 +416,9 @@ fun MainPage() {
                                 Text(text = "NO")
                             }
                         },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        textContentColor = MaterialTheme.colorScheme.onSurface,
+                        iconContentColor = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(10),
                         title = { Text(text = "Update Task") },
                         text = {
@@ -382,10 +434,22 @@ fun MainPage() {
     )
 }
 
-@Preview(showBackground = true)
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
-fun GreetingPreview() {
-    TODOTheme {
-        MainPage()
+fun LightThemePreview() {
+    val toggleTheme = remember { mutableStateOf(false) }
+    TODOTheme(darkTheme = toggleTheme.value) {
+        MainPage(toggleTheme = toggleTheme)
     }
 }
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun DarkThemePreview() {
+    val toggleTheme = remember { mutableStateOf(true) }
+    TODOTheme(darkTheme = toggleTheme.value) {
+        MainPage(toggleTheme = toggleTheme)
+    }
+}
+

@@ -439,7 +439,7 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(5f)
+                            .weight(0.5f)
                             .nestedScroll(parentNestedScrollConnection)
                     ) {
                         items(

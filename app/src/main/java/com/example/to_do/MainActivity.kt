@@ -7,7 +7,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainPage(toggleTheme: MutableState<Boolean>) {
 
@@ -153,7 +153,7 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
             CenterAlignedTopAppBar(
                 modifier = Modifier.shadow(
                     25.dp,
-                    RoundedCornerShape(0.dp, 0.dp, 10.dp, 10.dp),
+                    RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp),
                     true,
                     MaterialTheme.colorScheme.primary
                 ),
@@ -188,7 +188,8 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.baseline_light_mode_24),
                                         contentDescription = "Dark Mode",
-                                        modifier = Modifier.padding(3.dp)
+                                        modifier = Modifier.padding(4.dp),
+                                        tint = Color.Black
                                     )
                                 }
                             }
@@ -202,7 +203,7 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                     .padding(innerPadding)
                     .fillMaxSize()
                     .nestedScroll(parentNestedScrollConnection),
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
 
                 Spacer(modifier = Modifier.size(10.dp))
@@ -284,23 +285,21 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                 )
                 Spacer(modifier = Modifier.size(5.dp))
                 HorizontalDivider(
-                    thickness = 2.dp,
+                    thickness = 5.dp,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(7.dp, 0.dp, 7.dp, 0.dp)
-                        .shadow(10.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
-                if(taskList.isEmpty())
-                {
+                if (taskList.isEmpty()) {
                     Text(
                         text = "No task added.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.offset(15.dp)
                     )
-                }else {
+                } else {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -422,26 +421,25 @@ fun MainPage(toggleTheme: MutableState<Boolean>) {
                 )
                 Spacer(modifier = Modifier.size(5.dp))
                 HorizontalDivider(
-                    thickness = 2.dp,
+                    thickness = 5.dp,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(7.dp, 0.dp, 7.dp, 0.dp)
-                        .shadow(10.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
-                if(doneList.isEmpty()){
+                if (doneList.isEmpty()) {
                     Text(
                         text = "No task completed.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.offset(15.dp)
                     )
-                }else {
+                } else {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(0.2f)
+                            .weight(5f)
                             .nestedScroll(parentNestedScrollConnection)
                     ) {
                         items(
